@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Indexes (rebuilt by setup.sh)
+indexes/*.json
+
+# Local frameworks repo (cloned by setup.sh)
+# This is a separate clone of security-alliance/frameworks
+frameworks-repo/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

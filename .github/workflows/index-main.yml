@@ -1,0 +1,67 @@
+name: Build Main Index
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get commit SHA
+        id: meta
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build index
+        run: pnpm run index:build -- --branch main --sha ${{ steps.meta.outputs.sha }}
+        env:
+          INDEX_OUTPUT_DIR: ./indexes
+
+      - name: Upload index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-index
+          path: indexes/main-index.json
+          retention-days: 30
+
+  publish:
+    needs: build-index
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: main-index
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: index-main-${{ github.sha }}
+          name: 'Main Index (${{ steps.meta.outputs.short_sha }})'
+          body: |
+            Automated index release for main branch.
+            Commit: ${{ github.sha }}
+          files: main-index.json
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,67 @@
+name: Build Develop Index
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get commit SHA
+        id: meta
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build index
+        run: pnpm run index:build -- --branch develop --sha ${{ steps.meta.outputs.sha }}
+        env:
+          INDEX_OUTPUT_DIR: ./indexes
+
+      - name: Upload index artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: develop-index
+          path: indexes/develop-index.json
+          retention-days: 7
+
+  publish:
+    needs: build-index
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: develop-index
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: index-develop-${{ github.sha }}
+          name: 'Develop Index (${{ steps.meta.outputs.short_sha }})'
+          body: |
+            Automated index release for develop branch (draft).
+            Commit: ${{ github.sha }}
+          files: develop-index.json
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
