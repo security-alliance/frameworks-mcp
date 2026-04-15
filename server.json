@@ -3,31 +3,31 @@
   "version": "1.0.0",
   "description": "Public read-only MCP server for SEAL Frameworks security documentation",
   "author": "Security Alliance",
-  "homepage": "https://github.com/security-alliance/frameworks",
+  "homepage": "https://github.com/security-alliance/frameworks-mcp",
   "repository": {
     "type": "git",
-    "url": "https://github.com/security-alliance/frameworks"
+    "url": "https://github.com/security-alliance/frameworks-mcp"
   },
   "license": "CC-BY-SA-4.0",
-  "mcpVersion": "0.5.0",
+  "mcpVersion": "2024-11-05",
   "languages": ["typescript"],
   "platforms": ["node"],
   "tools": [
     {
       "name": "search_frameworks",
-      "description": "Search framework documentation sections"
+      "description": "Search section-level indexed content from the SEAL Frameworks documentation. Returns ranked results with snippets."
     },
     {
       "name": "fetch_framework_section",
-      "description": "Fetch full content of an indexed section"
+      "description": "Fetch the full normalized content of an indexed section by its ID."
     },
     {
       "name": "compare_framework_path",
-      "description": "Compare document between branches"
+      "description": "Compare the same document path between main and develop branches."
     },
     {
       "name": "list_frameworks",
-      "description": "List available frameworks"
+      "description": "List available frameworks/top-level categories on a branch."
     }
   ],
   "categories": ["documentation", "reference", "security"],
