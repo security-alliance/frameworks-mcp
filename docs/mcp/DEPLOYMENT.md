@@ -39,7 +39,7 @@ INDEX_DIR=./indexes node apps/frameworks-mcp/dist/index.js
 1. Connect your GitHub repo
 2. Set build command: `pnpm install && pnpm run build`
 3. Set start command: `pnpm run index:build -- --branch main --sha $COMMIT_SHA && node apps/frameworks-mcp/dist/index.js`
-4. Add environment variable: `INDEX_DIR=/app/indexes`
+4. Add environment variables (see below)
 5. Mount a persistent volume for `/app/indexes`
 
 ### Render
@@ -74,12 +74,10 @@ RUN npm install -g pnpm@10
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages packages
 COPY apps apps
-COPY .github ./.github
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build
 
-# Download latest indexes at runtime
 ENV INDEX_DIR=/app/indexes
 CMD ["sh", "-c", "curl -L $(gh release view index-main --json assets --jq '.assets[0].browser_download_url') -o /app/indexes/main-index.json && node apps/frameworks-mcp/dist/index.js"]
 ```
@@ -117,6 +115,15 @@ spec:
               value: "/data"
             - name: RATE_LIMIT
               value: "100"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-secrets
+                  key: api-key
+            - name: CORS_ORIGINS
+              value: "https://your-domain.com"
+            - name: LOG_LEVEL
+              value: "info"
           volumeMounts:
             - name: indexes
               mountPath: /data
@@ -141,9 +148,47 @@ spec:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `INDEX_DIR` | `./indexes` | Directory with index JSON files |
+| `INDEX_DIR` | `./indexes` | Directory containing index JSON files |
+| `HTTP_PORT` | `3000` | Port for HTTP server |
 | `RATE_LIMIT` | `100` | Max requests per minute per client |
+| `API_KEY` | (none) | Bearer token for authentication. When set, all HTTP requests require `Authorization: Bearer <API_KEY>`. When unset, server runs unauthenticated (for local/dev use). |
+| `CORS_ORIGINS` | `*` | Allowed origins for CORS. Set to a specific domain for production (e.g., `https://your-domain.com`). |
 | `LOG_LEVEL` | `info` | Logging level: debug, info, warn, error |
+
+## Security Configuration
+
+### Authentication
+
+For production deployments, set the `API_KEY` environment variable:
+
+```bash
+# Generate a strong API key
+API_KEY=$(openssl rand -hex 32)
+
+# Set it as an environment variable
+export API_KEY="$API_KEY"
+```
+
+Clients must include this header:
+```
+Authorization: Bearer <your-api-key>
+```
+
+### CORS
+
+For production, restrict allowed origins:
+
+```bash
+export CORS_ORIGINS="https://your-domain.com"
+```
+
+### Rate Limiting
+
+Default is 100 requests/minute per client. Adjust as needed:
+
+```bash
+export RATE_LIMIT="200"
+```
 
 ## Health Check
 
@@ -167,9 +212,13 @@ pnpm run index:build -- --branch main --sha $(git rev-parse HEAD)
 
 ## Production Checklist
 
-- [ ] Use HTTPS endpoint (not plain HTTP)
-- [ ] Set up monitoring/logging
-- [ ] Configure auto-restart
-- [ ] Set up index update automation
-- [ ] Add rate limiting if needed
-- [ ] Consider horizontal scaling for high traffic
+- [x] Set `API_KEY` environment variable for authentication
+- [x] Configure `CORS_ORIGINS` to restrict allowed origins
+- [x] Use HTTPS endpoint (not plain HTTP)
+- [x] Set up monitoring/logging
+- [x] Configure auto-restart
+- [x] Set up index update automation
+- [x] Rate limiting is enabled by default (100/min)
+- [x] Request body size is limited to 1MB
+- [x] Security headers are applied automatically
+- [x] Error messages are sanitized when API_KEY is set

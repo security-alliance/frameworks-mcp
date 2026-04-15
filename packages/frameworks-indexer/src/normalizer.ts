@@ -10,7 +10,13 @@ export function normalizeMdxToPlainText(mdx: string): string {
     return '';
   });
 
-  text = text.replace(/<[a-zA-Z][^>]*>[\s\S]*?<\/[a-zA-Z]+>/g, '');
+  text = text.replace(/<([a-zA-Z][^>]*)>([\s\S]*?)<\/[a-zA-Z]+>/g, (_match, tag: string, content: string) => {
+    const componentName = tag.split(/[\s/]/)[0];
+    if (SAFE_COMPONENTS.has(componentName)) {
+      return content;
+    }
+    return '';
+  });
   text = text.replace(/<[a-zA-Z][^>]*\/>/g, '');
 
   text = text.replace(/```[\s\S]*?```/g, '');

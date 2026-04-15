@@ -11,6 +11,11 @@ indexes/*.json
 # This is a separate clone of security-alliance/frameworks
 frameworks-repo/
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # IDE
 .idea/
 .vscode/
