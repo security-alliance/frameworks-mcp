@@ -17,23 +17,44 @@ AI agents (OpenAI, Claude, Cursor, etc.) can query the MCP server to:
 git clone https://github.com/security-alliance/frameworks-mcp
 cd frameworks-mcp
 
-# 2. Run setup (clones frameworks repo + builds indexes)
+# 2. Run setup (installs dependencies, clones frameworks repo, builds indexes)
 ./scripts/setup.sh
 
 # 3. Start the MCP server
-cd apps/frameworks-mcp
-npx tsx src/index.ts
+node_modules/.bin/tsx apps/frameworks-mcp/src/index.ts
 ```
 
 That's it. The server is now running and ready for AI agents to connect.
 
 ## AI Agent Configuration
 
-### Claude CLI
+### Claude Code
+
+Add the server at user scope (available across all your projects):
+
 ```bash
-claude mcp add frameworks \
-  --command npx \
-  --args "-y tsx /path/to/frameworks-mcp/apps/frameworks-mcp/src/index.ts"
+claude mcp add frameworks --scope user \
+  -- /path/to/frameworks-mcp/node_modules/.bin/tsx \
+     /path/to/frameworks-mcp/apps/frameworks-mcp/src/index.ts
+```
+
+Replace `/path/to/frameworks-mcp` with the absolute path to your local clone.
+
+Verify the server connected:
+
+```bash
+claude mcp list
+# expect: frameworks: ... - ✓ Connected
+```
+
+**Alternative: run the compiled build with `node`**
+
+If you've run `pnpm run build:mcp`, you can skip the TypeScript compilation at runtime:
+
+```bash
+claude mcp add frameworks --scope user \
+  -- $(which node) \
+     /path/to/frameworks-mcp/apps/frameworks-mcp/dist/index.js
 ```
 
 ### OpenCode
@@ -74,18 +95,18 @@ When you want fresh content from the frameworks repo:
 
 ```bash
 # Pull latest from frameworks repo
-cd frameworks-repo && git pull
+cd frameworks-repo && git pull && cd ..
 
 # Rebuild indexes
 pnpm run index:build -- \
   --branch main \
-  --sha $(cd frameworks-repo && git rev-parse HEAD) \
-  -- --content-dir $(pwd)/frameworks-repo/docs/pages
+  --sha "$(cd frameworks-repo && git rev-parse HEAD)" \
+  -- --content-dir "$(pwd)/frameworks-repo/docs/pages"
 
 pnpm run index:build -- \
   --branch develop \
-  --sha $(cd frameworks-repo && git rev-parse HEAD) \
-  -- --content-dir $(pwd)/frameworks-repo/docs/pages
+  --sha "$(cd frameworks-repo && git rev-parse HEAD)" \
+  -- --content-dir "$(pwd)/frameworks-repo/docs/pages"
 
 # Restart MCP server (it reads indexes on startup)
 ```
@@ -141,7 +162,7 @@ frameworks-mcp/
 | `./scripts/setup.sh` | First-time setup |
 | `pnpm run check:updates` | Check if updates available |
 | `pnpm run index:build` | Rebuild indexes |
-| `cd apps/frameworks-mcp && npx tsx src/index.ts` | Run MCP server |
+| `node_modules/.bin/tsx apps/frameworks-mcp/src/index.ts` | Run MCP server |
 | `pnpm run serve:http` | Run HTTP server (optional) |
 | `pnpm run build:mcp` | Compile for production |
 | `pnpm test` | Run tests |

@@ -10,7 +10,7 @@
     "check:updates": "tsx scripts/check-updates.ts",
     "dev:mcp": "pnpm --filter @security-alliance/frameworks-mcp run dev",
     "serve:http": "pnpm --filter @security-alliance/frameworks-mcp run serve:http",
-    "build:mcp": "pnpm --filter @security-alliance/frameworks-mcp run build",
+    "build:mcp": "pnpm --filter @security-alliance/frameworks-indexer run build && pnpm --filter @security-alliance/frameworks-mcp run build",
     "build:indexer": "pnpm --filter @security-alliance/frameworks-indexer run build",
     "build": "pnpm run build:indexer && pnpm run build:mcp",
     "test": "vitest run",

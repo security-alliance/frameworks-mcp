@@ -11,6 +11,13 @@ FRAMEWORKS_BRANCH="main"
 echo "=== Frameworks MCP Setup ==="
 echo ""
 
+# Install dependencies if not already installed
+if [ ! -d "node_modules" ]; then
+    echo "Installing dependencies..."
+    pnpm install
+    echo ""
+fi
+
 # Check if frameworks-repo already exists
 if [ -d "$FRAMEWORKS_REPO" ]; then
     echo "Found existing frameworks-repo directory"
@@ -32,22 +39,22 @@ mkdir -p indexes
 
 pnpm run index:build -- \
     --branch main \
-    --sha $COMMIT_SHA \
-    -- --content-dir $(pwd)/$FRAMEWORKS_REPO/docs/pages
+    --sha "$COMMIT_SHA" \
+    -- --content-dir "$(pwd)/$FRAMEWORKS_REPO/docs/pages"
 
 pnpm run index:build -- \
     --branch develop \
-    --sha $COMMIT_SHA \
-    -- --content-dir $(pwd)/$FRAMEWORKS_REPO/docs/pages
+    --sha "$COMMIT_SHA" \
+    -- --content-dir "$(pwd)/$FRAMEWORKS_REPO/docs/pages"
 
 echo ""
 echo "=== Setup Complete ==="
 echo ""
 echo "To run the MCP server:"
-echo "  cd apps/frameworks-mcp && npx tsx src/index.ts"
+echo "  node_modules/.bin/tsx apps/frameworks-mcp/src/index.ts"
 echo ""
-echo "To connect to AI agents, use:"
-echo "  npx tsx $(pwd)/apps/frameworks-mcp/src/index.ts"
+echo "To add to Claude Code:"
+echo "  claude mcp add frameworks --scope user -- \"$(pwd)/node_modules/.bin/tsx\" \"$(pwd)/apps/frameworks-mcp/src/index.ts\""
 echo ""
 echo "To update content later:"
 echo "  cd $FRAMEWORKS_REPO && git pull && pnpm run index:build ..."
