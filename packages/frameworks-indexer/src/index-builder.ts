@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FrameworkIndex, IndexedSection, FrameworkMetadata } from './types.js';
 import { extractSections } from './sectionizer.js';
+import { SCHEMA_VERSION } from './constants.js';
 
 interface BuildIndexOptions {
   branch: 'main' | 'develop';
@@ -64,6 +65,7 @@ export async function buildIndex(options: BuildIndexOptions): Promise<FrameworkI
   }));
 
   return {
+    schema_version: SCHEMA_VERSION,
     branch,
     commit_sha: commitSha,
     generated_at: new Date().toISOString(),

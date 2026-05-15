@@ -2,19 +2,17 @@
 
 ## search_frameworks
 
-Search section-level indexed content from the SEAL Frameworks documentation.
+Search section-level indexed content from the SEAL Frameworks documentation. Returns ranked results with snippets.
 
 ### Input Schema
 
-```json
-{
-  "query": "string",
-  "branch": "main|develop|both",
-  "framework": "string",
-  "tags": ["string"],
-  "limit": 20
-}
-```
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `query` | string | Yes | - | Search query string (1-500 chars) |
+| `branch` | `"main"` \| `"develop"` \| `"both"` | No | `"main"` | Branch to search |
+| `framework` | string | No | - | Filter by framework name |
+| `tags` | string[] | No | - | Filter by role tags |
+| `limit` | number | No | `20` | Max results (1-100) |
 
 ### Output Schema
 
@@ -46,13 +44,21 @@ Search section-level indexed content from the SEAL Frameworks documentation.
 ### Example
 
 ```bash
-curl -X POST http://localhost:3000/mcp/v1/tools/call \
+curl -X POST http://localhost:3000/tools/call \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-api-key>" \
   -d '{
-    "name": "search_frameworks",
-    "arguments": {"query": "prompt injection", "limit": 3}
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "search_frameworks",
+      "arguments": {"query": "prompt injection", "limit": 3}
+    }
   }'
 ```
+
+> **Note:** The `Authorization` header is only required when the `API_KEY` environment variable is set on the server.
 
 ---
 
@@ -62,11 +68,9 @@ Fetch the full normalized content of an indexed section by its ID.
 
 ### Input Schema
 
-```json
-{
-  "id": "string"
-}
-```
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Section ID from search results (min 1 char) |
 
 ### Output Schema
 
@@ -98,13 +102,11 @@ Compare the same document path between main and develop branches.
 
 ### Input Schema
 
-```json
-{
-  "path": "string",
-  "left": "main|develop",
-  "right": "main|develop"
-}
-```
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `path` | string | Yes | - | Document path to compare |
+| `left` | `"main"` \| `"develop"` | No | `"main"` | Left (base) branch |
+| `right` | `"main"` \| `"develop"` | No | `"develop"` | Right (comparison) branch |
 
 ### Output Schema
 
@@ -126,7 +128,7 @@ Compare the same document path between main and develop branches.
   "changes": {
     "status": "modified",
     "section_count_delta": 2,
-    "summary": "Document modified: 1 added, 0 removed"
+    "summary": "Document 'ai-security/prompt-injection-defenses' modified: 1 added, 0 removed"
   },
   "canonical_urls": {
     "left": "https://frameworks.securityalliance.org/ai-security/prompt-injection-defenses",
@@ -151,11 +153,9 @@ List available frameworks/top-level categories on a branch.
 
 ### Input Schema
 
-```json
-{
-  "branch": "main|develop"
-}
-```
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `branch` | `"main"` \| `"develop"` | No | `"main"` | Branch to list |
 
 ### Output Schema
 
@@ -174,5 +174,36 @@ List available frameworks/top-level categories on a branch.
       "canonical_url": "https://frameworks.securityalliance.org/ai-security"
     }
   ]
+}
+```
+
+---
+
+## HTTP API Endpoints
+
+The HTTP server exposes the following endpoints:
+
+| Method | Path | Auth Required | Description |
+|--------|------|---------------|-------------|
+| `GET` | `/health` | No | Health check (`{"status":"ok","server":"frameworks-mcp"}`) |
+| `GET` | `/tools/list` | Yes* | List available tools |
+| `POST` | `/tools/call` | Yes* | Call a tool (JSON-RPC request body) |
+| `OPTIONS` | Any | No | CORS preflight |
+
+\* Authentication via `Authorization: Bearer <key>` header is required when `API_KEY` env var is set.
+
+### JSON-RPC Request Format
+
+All `POST /tools/call` requests must use the JSON-RPC 2.0 envelope:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "<tool_name>",
+    "arguments": { ... }
+  }
 }
 ```

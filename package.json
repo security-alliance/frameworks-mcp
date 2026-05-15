@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "description": "MCP server and indexer for SEAL Frameworks documentation",
   "private": true,
+  "packageManager": "pnpm@10.15.0",
   "scripts": {
     "prebuild:indexer": "pnpm --filter @security-alliance/frameworks-indexer run build",
     "index:build": "tsx packages/frameworks-indexer/scripts/build-index.ts",
     "index:verify": "tsx scripts/verify-index.ts",
+    "manifest:generate": "tsx scripts/generate-manifest.ts",
     "check:updates": "tsx scripts/check-updates.ts",
     "dev:mcp": "pnpm --filter @security-alliance/frameworks-mcp run dev",
     "serve:http": "pnpm --filter @security-alliance/frameworks-mcp run serve:http",
-    "build:mcp": "pnpm --filter @security-alliance/frameworks-mcp run build",
+    "build:mcp": "pnpm --filter @security-alliance/frameworks-indexer run build && pnpm --filter @security-alliance/frameworks-mcp run build",
     "build:indexer": "pnpm --filter @security-alliance/frameworks-indexer run build",
     "build": "pnpm run build:indexer && pnpm run build:mcp",
     "test": "vitest run",
@@ -18,10 +20,12 @@
     "typecheck": "pnpm --filter @security-alliance/frameworks-indexer run typecheck && pnpm --filter @security-alliance/frameworks-mcp run typecheck"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^25.6.0",
+    "esbuild": "^0.28.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.2.0"
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -6,18 +6,25 @@ on:
       - develop
   workflow_dispatch:
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   build-index:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout MCP repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 1
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '20'
           cache: 'pnpm'
@@ -25,43 +32,59 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Checkout frameworks repository (develop)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: security-alliance/frameworks
+          ref: develop
+          path: frameworks-repo
+          fetch-depth: 1
+
       - name: Get commit SHA
         id: meta
         run: |
-          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "sha=$(cd frameworks-repo && git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(cd frameworks-repo && git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build index
-        run: pnpm run index:build -- --branch develop --sha ${{ steps.meta.outputs.sha }}
+        run: pnpm run index:build -- --branch develop --sha ${{ steps.meta.outputs.sha }} --content-dir frameworks-repo/docs/pages
         env:
           INDEX_OUTPUT_DIR: ./indexes
 
+      - name: Generate manifest
+        run: pnpm exec tsx scripts/generate-manifest.ts --index-dir ./indexes
+
       - name: Upload index artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: develop-index
-          path: indexes/develop-index.json
+          path: |
+            indexes/develop-index.json
+            indexes/manifest.json
           retention-days: 7
 
   publish:
     needs: build-index
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    permissions:
+      contents: write
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@b14cf4c92620c250e1c074ab0a5800e37df86765 # v4.2.0
         with:
           name: develop-index
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: index-develop-${{ github.sha }}
           name: 'Develop Index (${{ steps.meta.outputs.short_sha }})'
           body: |
             Automated index release for develop branch (draft).
             Commit: ${{ github.sha }}
-          files: develop-index.json
+          files: |
+            develop-index.json
+            manifest.json
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

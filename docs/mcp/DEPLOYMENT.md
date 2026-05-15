@@ -2,44 +2,23 @@
 
 ## Deployment Options
 
-### Cloudflare Pages
+There are two transport modes:
 
-**Cloudflare Pages is NOT suitable for this MCP server.**
+| Mode | Entry Point | Use Case |
+|------|-------------|----------|
+| **Stdio** | `dist/index.js` | Local CLI, Claude Desktop, opencode, VS Code extensions |
+| **HTTP** | `dist/http-server.js` | Remote access, OpenAI Agents SDK, web integrations |
 
-| Limitation | Reason |
-|------------|--------|
-| Static hosting only | Pages deploys pre-built static files, not running services |
-| No stdio transport | MCP requires stdio which Pages doesn't support |
-| No long-running processes | Pages is designed for HTTP request/response |
+For **stdio mode**, no special deployment is needed -- the MCP client launches the server process directly.
 
-**What works on Cloudflare:**
-- Use Cloudflare **Workers** with a custom HTTP→stdio bridge (complex)
-- Use Cloudflare **Tunnel** (Warp) to expose a server running elsewhere
+For **HTTP mode**, deploy to any platform that runs Node.js:
 
-### Alternative: Traditional VPS/Containers
-
-The MCP server runs anywhere Node.js runs:
-
-```bash
-# Simple deployment
-git clone https://github.com/security-alliance/frameworks
-cd frameworks
-pnpm install
-pnpm run build
-pnpm run index:build -- --branch main --sha $(git rev-parse HEAD)
-
-# Run
-INDEX_DIR=./indexes node apps/frameworks-mcp/dist/index.js
-```
-
-## Recommended Platforms
-
-### Railway (Simplest)
+### Railway
 
 1. Connect your GitHub repo
 2. Set build command: `pnpm install && pnpm run build`
-3. Set start command: `pnpm run index:build -- --branch main --sha $COMMIT_SHA && node apps/frameworks-mcp/dist/index.js`
-4. Add environment variable: `INDEX_DIR=/app/indexes`
+3. Set start command: `pnpm run index:build -- --branch main --sha $COMMIT_SHA && node apps/frameworks-mcp/dist/http-server.js`
+4. Add environment variables (see below)
 5. Mount a persistent volume for `/app/indexes`
 
 ### Render
@@ -47,19 +26,14 @@ INDEX_DIR=./indexes node apps/frameworks-mcp/dist/index.js
 1. Create Web Service
 2. Connect GitHub repo
 3. Build command: `pnpm install && pnpm run build`
-4. Start command: `pnpm run index:build -- --branch main --sha $COMMIT_SHA && node apps/frameworks-mcp/dist/index.js`
+4. Start command: `pnpm run index:build -- --branch main --sha $COMMIT_SHA && node apps/frameworks-mcp/dist/http-server.js`
 5. Plan: Free tier works for development
 
 ### Fly.io
 
 ```bash
-# Create app
 fly launch
-
-# Create volume for indexes
 fly volumes create indexes --size 1
-
-# Deploy
 fly deploy
 ```
 
@@ -69,25 +43,30 @@ fly deploy
 FROM node:20-slim
 WORKDIR /app
 
-RUN npm install -g pnpm@10
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages packages
 COPY apps apps
-COPY .github ./.github
 
 RUN pnpm install --frozen-lockfile
 RUN pnpm run build
 
-# Download latest indexes at runtime
 ENV INDEX_DIR=/app/indexes
-CMD ["sh", "-c", "curl -L $(gh release view index-main --json assets --jq '.assets[0].browser_download_url') -o /app/indexes/main-index.json && node apps/frameworks-mcp/dist/index.js"]
+ENV HTTP_PORT=3000
+
+EXPOSE 3000
+
+CMD ["node", "apps/frameworks-mcp/dist/http-server.js"]
 ```
 
 Build and run:
 ```bash
 docker build -t frameworks-mcp .
-docker run -p 3000:3000 -v $(pwd)/indexes:/app/indexes frameworks-mcp
+docker run -p 3000:3000 \
+  -e API_KEY=$(openssl rand -hex 32) \
+  -v $(pwd)/indexes:/app/indexes \
+  frameworks-mcp
 ```
 
 ## Kubernetes
@@ -115,11 +94,34 @@ spec:
           env:
             - name: INDEX_DIR
               value: "/data"
+            - name: HTTP_PORT
+              value: "3000"
             - name: RATE_LIMIT
               value: "100"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-secrets
+                  key: api-key
+            - name: CORS_ORIGINS
+              value: "https://your-domain.com"
+            - name: LOG_LEVEL
+              value: "info"
           volumeMounts:
             - name: indexes
               mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 3
+            periodSeconds: 10
       volumes:
         - name: indexes
           persistentVolumeClaim:
@@ -141,14 +143,55 @@ spec:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `INDEX_DIR` | `./indexes` | Directory with index JSON files |
-| `RATE_LIMIT` | `100` | Max requests per minute per client |
+| `INDEX_DIR` | `./indexes` (stdio walks up to find it; HTTP uses `process.cwd()/indexes`) | Directory containing index JSON files |
+| `HTTP_PORT` | `3000` | Port for HTTP server (stdio transport ignores this) |
+| `RATE_LIMIT` | `100` | Max requests per minute per client (HTTP) or globally (stdio) |
+| `API_KEY` | (none) | Bearer token for HTTP authentication. When set, all tool endpoints require `Authorization: Bearer <API_KEY>`. When unset, server runs unauthenticated. `/health` is always public. |
+| `CORS_ORIGINS` | (unset, sends `*`) | Allowed origins for CORS. Set to a specific domain for production (e.g., `https://your-domain.com`). When unset, `Access-Control-Allow-Origin: *` is sent. |
 | `LOG_LEVEL` | `info` | Logging level: debug, info, warn, error |
+
+## Security Configuration
+
+### Authentication
+
+For production deployments, set the `API_KEY` environment variable:
+
+```bash
+# Generate a strong API key
+API_KEY=$(openssl rand -hex 32)
+
+# Set it as an environment variable
+export API_KEY="$API_KEY"
+```
+
+Clients must include this header on tool endpoints (not required for `/health`):
+```
+Authorization: Bearer <your-api-key>
+```
+
+### CORS
+
+For production, restrict allowed origins:
+
+```bash
+export CORS_ORIGINS="https://your-domain.com"
+```
+
+When `CORS_ORIGINS` is unset, the server sends `Access-Control-Allow-Origin: *`.
+
+### Rate Limiting
+
+Default is 100 requests/minute per client (HTTP) or globally (stdio). Adjust as needed:
+
+```bash
+export RATE_LIMIT="200"
+```
 
 ## Health Check
 
 ```bash
 curl http://localhost:3000/health
+# Returns: {"status":"ok","server":"frameworks-mcp"}
 ```
 
 ## Index Updates
@@ -161,15 +204,18 @@ gh release download index-main --pattern "*.json" -D indexes/
 gh release download index-develop --pattern "*.json" -D indexes/
 
 # Or rebuild locally
-git pull
 pnpm run index:build -- --branch main --sha $(git rev-parse HEAD)
 ```
 
 ## Production Checklist
 
+- [ ] Set `API_KEY` environment variable for authentication
+- [ ] Configure `CORS_ORIGINS` to restrict allowed origins
 - [ ] Use HTTPS endpoint (not plain HTTP)
 - [ ] Set up monitoring/logging
 - [ ] Configure auto-restart
 - [ ] Set up index update automation
-- [ ] Add rate limiting if needed
-- [ ] Consider horizontal scaling for high traffic
+- [ ] Rate limiting is enabled by default (100/min)
+- [ ] Request body size is limited to 1MB
+- [ ] Security headers are applied automatically
+- [ ] Error messages are sanitized when API_KEY is set
