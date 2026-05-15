@@ -64,6 +64,10 @@ function validateIndex(index: FrameworkIndex, branch: string): string[] {
     errors.push(`Missing branch field`);
   }
 
+  if (typeof index.schema_version !== 'number') {
+    errors.push(`Missing schema_version`);
+  }
+
   if (!index.commit_sha) {
     errors.push(`Missing commit_sha`);
   }

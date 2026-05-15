@@ -7,6 +7,26 @@ interface MiniSearchResult {
   score: number;
 }
 
+const searchCaches = new Map<'main' | 'develop', MiniSearch<IndexedSection>>();
+
+function getSearchInstance(branch: 'main' | 'develop'): MiniSearch<IndexedSection> {
+  let instance = searchCaches.get(branch);
+  if (instance) return instance;
+
+  const index = getIndex(branch);
+  instance = new MiniSearch<IndexedSection>({
+    fields: ['section_title', 'content', 'page_title', 'framework', 'tags'],
+    storeFields: ['id', 'branch', 'path', 'page_title', 'section_title', 'framework', 'tags', 'snippet', 'canonical_url', 'repo_url', 'commit_sha', 'source_url', 'github_url', 'status'],
+  });
+  instance.addAll(index.sections);
+  searchCaches.set(branch, instance);
+  return instance;
+}
+
+export function clearSearchCaches(): void {
+  searchCaches.clear();
+}
+
 export async function searchSections(options: SearchOptions): Promise<SearchResult[]> {
   const { query, branch = 'main', framework, tags, limit = 20 } = options;
 
@@ -14,14 +34,8 @@ export async function searchSections(options: SearchOptions): Promise<SearchResu
   const allResults: SearchResult[] = [];
 
   for (const b of branchesToSearch) {
+    const searchInstance = getSearchInstance(b);
     const index = getIndex(b);
-
-    const searchInstance = new MiniSearch<IndexedSection>({
-      fields: ['section_title', 'content', 'page_title', 'framework', 'tags'],
-      storeFields: ['id', 'branch', 'path', 'page_title', 'section_title', 'framework', 'tags', 'snippet', 'canonical_url', 'repo_url', 'commit_sha'],
-    });
-
-    searchInstance.addAll(index.sections);
 
     const results = searchInstance.search(query, {
       boost: { section_title: 2, page_title: 1.5 },
@@ -48,8 +62,11 @@ export async function searchSections(options: SearchOptions): Promise<SearchResu
         snippet: section.snippet,
         canonical_url: section.canonical_url,
         repo_url: section.repo_url,
+        source_url: section.source_url,
+        github_url: section.github_url,
         commit_sha: section.commit_sha,
         score: r.score,
+        status: section.status,
       });
     }
   }

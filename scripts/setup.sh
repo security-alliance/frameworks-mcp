@@ -4,9 +4,22 @@
 
 set -e
 
-FRAMEWORKS_REPO="frameworks-repo"
 FRAMEWORKS_URL="https://github.com/security-alliance/frameworks"
-FRAMEWORKS_BRANCH="main"
+
+MAIN_REPO="frameworks-repo-main"
+DEVELOP_REPO="frameworks-repo-develop"
+
+function clone_or_update() {
+  local repo_dir="$1"
+  local branch="$2"
+  if [ -d "$repo_dir/.git" ]; then
+    echo "Updating $repo_dir for $branch..."
+    cd "$repo_dir" && git fetch origin "$branch" && git checkout "$branch" && git pull origin "$branch" && cd ..
+  else
+    echo "Cloning frameworks $branch into $repo_dir..."
+    git clone --depth 1 --branch "$branch" "$FRAMEWORKS_URL" "$repo_dir"
+  fi
+}
 
 echo "=== Frameworks MCP Setup ==="
 echo ""
@@ -18,34 +31,30 @@ if [ ! -d "node_modules" ]; then
     echo ""
 fi
 
-# Check if frameworks-repo already exists
-if [ -d "$FRAMEWORKS_REPO" ]; then
-    echo "Found existing frameworks-repo directory"
-    echo "Updating..."
-    cd $FRAMEWORKS_REPO && git fetch origin $FRAMEWORKS_BRANCH && git checkout $FRAMEWORKS_BRANCH && cd ..
-else
-    echo "Cloning frameworks repository..."
-    git clone --depth 1 --branch $FRAMEWORKS_BRANCH $FRAMEWORKS_URL $FRAMEWORKS_REPO
-fi
+clone_or_update "$MAIN_REPO" "main"
+clone_or_update "$DEVELOP_REPO" "develop"
 
-# Get commit SHA
-COMMIT_SHA=$(cd $FRAMEWORKS_REPO && git rev-parse HEAD)
-echo "Using frameworks @ $COMMIT_SHA"
+MAIN_SHA=$(cd "$MAIN_REPO" && git rev-parse HEAD)
+DEVELOP_SHA=$(cd "$DEVELOP_REPO" && git rev-parse HEAD)
+
+echo "Using frameworks main @ $MAIN_SHA"
+echo "Using frameworks develop @ $DEVELOP_SHA"
 echo ""
 
 # Build indexes
-echo "Building indexes..."
 mkdir -p indexes
 
 pnpm run index:build -- \
     --branch main \
-    --sha "$COMMIT_SHA" \
-    -- --content-dir "$(pwd)/$FRAMEWORKS_REPO/docs/pages"
+    --sha "$MAIN_SHA" \
+    --content-dir "$(pwd)/$MAIN_REPO/docs/pages"
 
 pnpm run index:build -- \
     --branch develop \
-    --sha "$COMMIT_SHA" \
-    -- --content-dir "$(pwd)/$FRAMEWORKS_REPO/docs/pages"
+    --sha "$DEVELOP_SHA" \
+    --content-dir "$(pwd)/$DEVELOP_REPO/docs/pages"
+
+pnpm exec tsx scripts/generate-manifest.ts --index-dir indexes
 
 echo ""
 echo "=== Setup Complete ==="
@@ -57,4 +66,4 @@ echo "To add to Claude Code:"
 echo "  claude mcp add frameworks --scope user -- \"$(pwd)/node_modules/.bin/tsx\" \"$(pwd)/apps/frameworks-mcp/src/index.ts\""
 echo ""
 echo "To update content later:"
-echo "  cd $FRAMEWORKS_REPO && git pull && pnpm run index:build ..."
+echo "  Run this script again or use pnpm run check:updates"

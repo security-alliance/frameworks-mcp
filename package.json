@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "MCP server and indexer for SEAL Frameworks documentation",
   "private": true,
+  "packageManager": "pnpm@10.15.0",
   "scripts": {
     "prebuild:indexer": "pnpm --filter @security-alliance/frameworks-indexer run build",
     "index:build": "tsx packages/frameworks-indexer/scripts/build-index.ts",
     "index:verify": "tsx scripts/verify-index.ts",
+    "manifest:generate": "tsx scripts/generate-manifest.ts",
     "check:updates": "tsx scripts/check-updates.ts",
     "dev:mcp": "pnpm --filter @security-alliance/frameworks-mcp run dev",
     "serve:http": "pnpm --filter @security-alliance/frameworks-mcp run serve:http",

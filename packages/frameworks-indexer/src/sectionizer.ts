@@ -1,7 +1,8 @@
 import matter from 'gray-matter';
+import * as crypto from 'crypto';
 import { IndexedSection } from './types.js';
-import { normalizeMdxToPlainText, generateSnippet, generateHeadingAnchor, generateSectionId } from './normalizer.js';
-import { URL_TEMPLATES, SECTION_ID_SALT } from './constants.js';
+import { normalizeMdxToPlainText, generateSnippet, generateHeadingAnchor } from './normalizer.js';
+import { URL_TEMPLATES } from './constants.js';
 
 export interface SectionParseResult {
   heading: string;
@@ -68,6 +69,10 @@ export interface ExtractOptions {
   branch: 'main' | 'develop';
 }
 
+function hashContent(content: string): string {
+  return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
+}
+
 export function extractSections(options: ExtractOptions): IndexedSection[] {
   const { filePath, mdxContent, commitSha, branch } = options;
 
@@ -82,10 +87,14 @@ export function extractSections(options: ExtractOptions): IndexedSection[] {
   const pageTitle = frontmatter.title?.replace(/\|.*$/, '').trim() || headings[0]?.heading || pathWithoutExt;
   const framework = pathWithoutExt.split('/')[0] || 'general';
   const tags: string[] = frontmatter.tags || [];
+  const description: string | undefined = frontmatter.description;
 
-  return headings.map((h, idx) => {
+  return headings.map((h) => {
     const normalizedContent = normalizeMdxToPlainText(h.content);
-    const id = generateSectionId(pathWithoutExt, h.heading, `${SECTION_ID_SALT}:${h.level}:${idx}`);
+    const sourceFilePath = `docs/pages/${pathWithoutExt}.mdx`;
+    const githubUrl = `${URL_TEMPLATES.repo.blob}/${commitSha}/${sourceFilePath}`;
+
+    const id = `${pathWithoutExt}#${h.anchor}`;
 
     return {
       id,
@@ -98,10 +107,15 @@ export function extractSections(options: ExtractOptions): IndexedSection[] {
       content: normalizedContent,
       snippet: generateSnippet(normalizedContent),
       canonical_url: `${URL_TEMPLATES.canonical[branch]}/${pathWithoutExt}#${h.anchor}`,
-      repo_url: `${URL_TEMPLATES.repo.blob}/${commitSha}/${pathWithoutExt}.mdx`,
+      repo_url: githubUrl,
+      source_url: `${URL_TEMPLATES.canonical[branch]}/${pathWithoutExt}#${h.anchor}`,
+      github_url: githubUrl,
       commit_sha: commitSha,
       heading_anchor: h.anchor,
-      source_file: pathWithoutExt + '.mdx',
-    };
+      source_file: sourceFilePath,
+      description,
+      status: (branch === 'develop' ? 'draft' : 'stable') as 'stable' | 'draft',
+      content_hash: hashContent(normalizedContent),
+    } satisfies IndexedSection;
   });
 }

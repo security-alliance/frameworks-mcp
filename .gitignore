@@ -7,9 +7,10 @@ dist/
 # Indexes (rebuilt by setup.sh)
 indexes/*.json
 
-# Local frameworks repo (cloned by setup.sh)
-# This is a separate clone of security-alliance/frameworks
+# Local frameworks repos (cloned by setup.sh)
 frameworks-repo/
+frameworks-repo-main/
+frameworks-repo-develop/
 
 # Environment / secrets
 .env

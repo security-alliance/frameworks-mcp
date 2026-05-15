@@ -1,7 +1,10 @@
 import type { CompareResult, BranchSnapshot, ChangeSummary, IndexedSection } from '@security-alliance/frameworks-indexer';
-import { URL_TEMPLATES } from '@security-alliance/frameworks-indexer';
 import { getIndex, getSectionsByPath } from './index-store.js';
 import * as crypto from 'crypto';
+
+function githubUrl(commitSha: string, path: string): string {
+  return `https://github.com/security-alliance/frameworks/blob/${commitSha}/docs/pages/${path}.mdx`;
+}
 
 export async function comparePath(
   path: string,
@@ -39,12 +42,12 @@ export async function comparePath(
     right: rightSnapshot,
     changes: summary,
     canonical_urls: {
-      left: leftExists ? `${URL_TEMPLATES.canonical[left]}/${path}` : '',
-      right: rightExists ? `${URL_TEMPLATES.canonical[right]}/${path}` : '',
+      left: leftExists ? `https://frameworks.securityalliance.org/${path}` : '',
+      right: rightExists ? `https://frameworks.securityalliance.dev/${path}` : '',
     },
     repo_urls: {
-      left: leftExists ? `${URL_TEMPLATES.repo.blob}/${leftIndex.commit_sha}/${path}.mdx` : '',
-      right: rightExists ? `${URL_TEMPLATES.repo.blob}/${rightIndex.commit_sha}/${path}.mdx` : '',
+      left: leftExists ? githubUrl(leftIndex.commit_sha, path) : '',
+      right: rightExists ? githubUrl(rightIndex.commit_sha, path) : '',
     },
     commit_shas: {
       left: leftIndex.commit_sha,

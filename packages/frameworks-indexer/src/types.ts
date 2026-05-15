@@ -13,9 +13,15 @@ export interface IndexedSection {
   commit_sha: string;
   heading_anchor: string;
   source_file: string;
+  source_url: string;
+  github_url: string;
+  description?: string;
+  status: 'stable' | 'draft';
+  content_hash: string;
 }
 
 export interface FrameworkIndex {
+  schema_version: 1;
   branch: 'main' | 'develop';
   commit_sha: string;
   generated_at: string;
@@ -54,6 +60,9 @@ export interface SearchResult {
   repo_url: string;
   commit_sha: string;
   score: number;
+  source_url: string;
+  github_url: string;
+  status: 'stable' | 'draft';
 }
 
 export interface CompareResult {

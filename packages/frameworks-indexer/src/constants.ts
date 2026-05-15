@@ -11,6 +11,8 @@ export const URL_TEMPLATES = {
 
 export const SECTION_ID_SALT = 'seal-frameworks-v1';
 
+export const SCHEMA_VERSION = 1;
+
 export const SAFE_COMPONENTS = new Set([
   'TagList',
   'AttributionList',
