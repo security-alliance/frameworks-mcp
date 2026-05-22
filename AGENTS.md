@@ -29,9 +29,11 @@ All content is derived from source MDX files, not scraped HTML.
 
 ## Recommended Usage Pattern
 
-1. **Search** for relevant sections using `search_frameworks`
-2. **Fetch** full content using `fetch_framework_section`
-3. **Compare** if checking draft vs stable differences
+1. **List** available frameworks using `list_frameworks`
+2. **Outline** a framework's structure using `get_framework_outline` to navigate it sequentially
+3. **Search** for relevant sections using `search_frameworks`
+4. **Fetch** full content using `fetch_framework_section`
+5. **Compare** if checking draft vs stable differences
 
 ## Important Warnings
 

@@ -130,6 +130,7 @@ pnpm run check:updates
 | `fetch_framework_section` | Get full content | `id` (from search) |
 | `compare_framework_path` | Compare branches | `path`, `left`, `right` |
 | `list_frameworks` | List categories | `branch` |
+| `get_framework_outline` | Get pages and sections in document order | `framework`, `branch` |
 
 ## Project Structure
 
@@ -139,7 +140,7 @@ frameworks-mcp/
 │   └── src/
 │       ├── index.ts        # stdio MCP server
 │       ├── http-server.ts  # HTTP wrapper (optional)
-│       ├── tools/          # search, fetch, compare, list
+│       ├── tools/          # search, fetch, compare, list, outline
 │       └── services/        # index-store, search, compare
 ├── packages/frameworks-indexer/   # MDX → searchable index
 ├── indexes/

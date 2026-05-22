@@ -13,6 +13,7 @@ import { searchTool, handleSearch } from './tools/search.js';
 import { fetchTool, handleFetch } from './tools/fetch.js';
 import { compareTool, handleCompare } from './tools/compare.js';
 import { listTool, handleList } from './tools/list.js';
+import { outlineTool, handleOutline } from './tools/outline.js';
 import { rateLimiter, sanitizeInput, getClientId, sanitizeError } from './security/middleware.js';
 import { logger } from './utils/logger.js';
 
@@ -30,7 +31,7 @@ const server = new Server(
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [searchTool, fetchTool, compareTool, listTool],
+    tools: [searchTool, fetchTool, compareTool, listTool, outlineTool],
   };
 });
 
@@ -57,6 +58,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
         return await handleCompare(sanitizedArgs);
       case 'list_frameworks':
         return await handleList(sanitizedArgs);
+      case 'get_framework_outline':
+        return await handleOutline(sanitizedArgs);
       default:
         return {
           content: [{ type: 'text', text: `Unknown tool: ${name}` }],
