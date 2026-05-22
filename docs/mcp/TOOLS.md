@@ -179,6 +179,50 @@ List available frameworks/top-level categories on a branch.
 
 ---
 
+## get_framework_outline
+
+Return the hierarchical structure of a framework: pages and their sections in document order. Use this before fetching content to understand what a framework covers and navigate it sequentially.
+
+### Input Schema
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `framework` | string | Yes | - | Framework name (e.g. `"incident-management"`). Use `list_frameworks` to discover valid names. |
+| `branch` | `"main"` \| `"develop"` | No | `"main"` | Branch to read from |
+
+### Output Schema
+
+```json
+{
+  "framework": "incident-management",
+  "branch": "main",
+  "is_draft": false,
+  "commit_sha": "abc123def456",
+  "page_count": 12,
+  "section_count": 87,
+  "pages": [
+    {
+      "path": "incident-management/communication-strategies",
+      "page_title": "Incident Communication Strategies",
+      "canonical_url": "https://frameworks.securityalliance.org/incident-management/communication-strategies",
+      "github_url": "https://github.com/security-alliance/frameworks/blob/abc123/docs/pages/incident-management/communication-strategies.mdx",
+      "status": "stable",
+      "section_count": 2,
+      "sections": [
+        {
+          "id": "abc123",
+          "section_title": "Communication Strategies",
+          "heading_anchor": "communication-strategies",
+          "canonical_url": "https://frameworks.securityalliance.org/incident-management/communication-strategies#communication-strategies"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
 ## HTTP API Endpoints
 
 The HTTP server exposes the following endpoints:
